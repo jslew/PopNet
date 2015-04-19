@@ -3,7 +3,6 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 
 namespace Pop.Net
@@ -11,16 +10,17 @@ namespace Pop.Net
     public class ConnectionHandler : ReceiveActor
     {
         private TcpClient _client;
-        private readonly CancellationToken _token;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly IActorRef _connectionManager;
         private NetworkStream _stream;
         private StreamReader _reader;
         private IActorRef _stateHandler;
 
-        public ConnectionHandler(TcpClient client, CancellationToken token)
-        {            
-            _client = client;
-            _token = token;
-            Receive<string>(s => s == "start", s => HandleStart());        
+        public ConnectionHandler(CancellationTokenSource cts)
+        {
+            _connectionManager = Context.Parent;
+            _cancellationTokenSource = cts;            
+            Receive<Messages.ConnectionOpened>(msg => HandleConnectionOpened(msg));        
         }
 
         protected override void PostStop()        
@@ -43,7 +43,7 @@ namespace Pop.Net
             if (message.Line == null)
             {
                 Console.WriteLine("Client disconnected, shutting down...");
-                Context.Stop(Self);
+                _connectionManager.Tell(new Messages.ConnectionClosed());
                 return;
             }
             Console.WriteLine("incoming: " + message.Line);
@@ -51,8 +51,9 @@ namespace Pop.Net
             ReadNextLine();
         }
 
-        private void HandleStart()
+        private void HandleConnectionOpened(Messages.ConnectionOpened msg)
         {
+            _client = msg.Client;
             _stream = _client.GetStream();
             _reader = new StreamReader(_stream);
             Self.Tell(new Messages.SendLine
@@ -60,23 +61,22 @@ namespace Pop.Net
                 Line = "+OK PopNet server ready."
             });
             ReadNextLine();
-            BecomeStateHandler(Props.Create(() => new AuthorizationHandler(Self)), () =>
+            BecomeStateHandler<AuthorizationHandler>(() =>
             {
-                Receive<Messages.UserAuthenticated>(msg => HandleUserAuthenticated(msg));
+                Receive<Messages.UserAuthenticated>(x => HandleUserAuthenticated(x));
             });
         }
 
-        private void BecomeStateHandler(Props props, Action becomeAction = null )
+        private void BecomeStateHandler<TActor>(Action becomeAction = null ) where TActor : ActorBase
         {            
-            if (_stateHandler != null)
-            {
-                Context.Stop(_stateHandler);
-            }
-            _stateHandler = Context.ActorOf(props);
+            StopStateHandler();
+            _stateHandler = Context.ActorOf(DependencyResolver.Instance.Create<TActor>(), typeof(TActor).Name);
             Become(() =>
             {                
                 Receive<Messages.ReceiveLine>(l => HandleReceiveLine(l));
                 Receive<Messages.SendLine>(l => HandleSendLine(l));
+                Receive<Messages.SendLines>(l => HandleSendLines(l));
+                Receive<Messages.ClientQuit>(l => HandleClientQuit());
                 if (becomeAction != null)
                 {
                     becomeAction();
@@ -84,21 +84,46 @@ namespace Pop.Net
             });
         }
 
+        private void StopStateHandler()
+        {
+            if (_stateHandler != null)
+            {
+                Context.Stop(_stateHandler);
+            }
+        }
+
+        private void HandleClientQuit()
+        {
+            Console.WriteLine("QUIT received, shutting down connection...");            
+            _connectionManager.Tell(new Messages.ConnectionClosed());            
+        }
+
         private void HandleUserAuthenticated(Messages.UserAuthenticated msg)
         {
-            BecomeStateHandler(Props.Create(() => new TransactionHandler(Self)));
+            BecomeStateHandler<TransactionHandler>();
         }
 
         private void HandleSendLine(Messages.SendLine sendLine)
         {
-            var bytes = Encoding.ASCII.GetBytes(sendLine.Line + "\r\n");
-            Console.WriteLine("send: {0}", sendLine.Line);
-            _stream.WriteAsync(bytes, 0, bytes.Length, _token);
+            WriteLine(sendLine.Line);
+        }
+        
+        private void HandleSendLines(Messages.SendLines msg)
+        {
+            msg.Lines.ForEach(WriteLine);
+        }
+        private void WriteLine(string text)
+        {
+            var bytes = Encoding.ASCII.GetBytes(text + "\r\n");
+            Console.WriteLine("send: {0}", text);
+            _stream.WriteAsync(bytes, 0, bytes.Length, _cancellationTokenSource.Token);
         }
 
         private void ReadNextLine()
         {
-            _reader.ReadLineAsync().ContinueWith((t) => new Messages.ReceiveLine {Line = t.Result}, _token).PipeTo(Self);
+            _reader.ReadLineAsync()
+                .ContinueWith((t) => new Messages.ReceiveLine {Line = t.Result}, _cancellationTokenSource.Token)
+                .PipeTo(Self);
         }       
     }
 }

@@ -8,21 +8,19 @@ namespace Pop.Net
 {
     internal class ConnectionManager : ReceiveActor
     {
+        private readonly CancellationTokenSource _ctx;
         private TcpListener _tcpListener;
         private CancellationTokenSource _cts;
+        private int _connectionNum = 0;
 
-        public ConnectionManager()
+        public ConnectionManager(CancellationTokenSource ctx)
         {
+            _ctx = ctx;
             Receive<string>(msg => msg == "start", _ => Listen());
             Receive<TcpClient>(client => HandleNewClient(client));
+            Receive<Messages.ConnectionClosed>(msg => HandleConnectionClosed(msg));
         }
-
-        protected override void PreStart()
-        {
-            base.PreStart();
-            _cts = new CancellationTokenSource();
-        }
-
+                
         private void Listen()
         {
             _tcpListener = new TcpListener(IPAddress.Any, 3857);            
@@ -38,11 +36,18 @@ namespace Pop.Net
 
         private void HandleNewClient(TcpClient client)
         {
-            var handlerProps = Props.Create(() => new ConnectionHandler(client,_cts.Token));
+            var handlerProps = DependencyResolver.Instance.Create<ConnectionHandler>();
             Console.WriteLine("Client conneected...");
-            Context.ActorOf(handlerProps).Tell("start");
+            Context.ActorOf(handlerProps,"ConnectionHandler" + _connectionNum++).Tell(new Messages.ConnectionOpened
+            {
+                Client = client
+            });
             AcceptNextClient();
         }
-    
+
+        private void HandleConnectionClosed(Messages.ConnectionClosed msg)
+        {            
+            Context.Stop(Context.Sender);
+        }    
     }
 }

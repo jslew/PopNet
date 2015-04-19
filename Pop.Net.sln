@@ -5,6 +5,8 @@ VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pop.Net", "Pop.Net\Pop.Net.csproj", "{2FB6E8E0-73EF-4787-8E68-9BDB664155B8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClient", "TestClient\TestClient.csproj", "{8FCDFCD5-5C91-4D2E-8292-F84EFA94F592}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{2FB6E8E0-73EF-4787-8E68-9BDB664155B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2FB6E8E0-73EF-4787-8E68-9BDB664155B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2FB6E8E0-73EF-4787-8E68-9BDB664155B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FCDFCD5-5C91-4D2E-8292-F84EFA94F592}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FCDFCD5-5C91-4D2E-8292-F84EFA94F592}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FCDFCD5-5C91-4D2E-8292-F84EFA94F592}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FCDFCD5-5C91-4D2E-8292-F84EFA94F592}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

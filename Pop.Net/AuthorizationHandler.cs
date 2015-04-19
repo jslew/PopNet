@@ -7,15 +7,15 @@ namespace Pop.Net
     {        
         private string _userName;
 
-        public AuthorizationHandler(IActorRef connectionHandler) : base(connectionHandler)
+        public AuthorizationHandler() : base(Context.Parent)
         {                        
             Become(ExpectUserCommand);                         
         }
 
         private void ExpectUserCommand()
         {
-            Receive(ReceiveUser, IsCommandPredicate("USER"));
-            Receive<Messages.ReceiveLine>(msg => ReceiveUnknown(msg));
+            ReceiveCommand("USER", ReceiveUser);            
+            ReceiveDefault();
         }        
 
         public void ReceiveUser(Messages.ReceiveLine msg)
@@ -33,10 +33,7 @@ namespace Pop.Net
             }
         }
 
-        public void ReceiveUnknown(Messages.ReceiveLine msg)
-        {
-            SendErrResponse("Unknown command: {0}", msg.Line);
-        }
+        
 
         private void ExpectPassCommand()
         {
@@ -76,6 +73,6 @@ namespace Pop.Net
             if (idx == -1)
                 return "";
             return line.Line.Substring(idx + 1).Trim();
-        }
+        }        
     }
 }
