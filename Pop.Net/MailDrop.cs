@@ -23,8 +23,9 @@ namespace Pop.Net
         {
             get
             {
-                return new DirectoryInfo(DataDir).EnumerateFiles("*.eml").Select( f => new MailMessage
+                return new DirectoryInfo(DataDir).EnumerateFiles("*.eml").OrderBy( x => x.LastWriteTime).Select( f => new MailMessage
                 {
+                    Date = f.LastWriteTimeUtc,
                     Size = f.Length
                 });
             }
@@ -49,5 +50,6 @@ namespace Pop.Net
     internal class MailMessage
     {        
         public long Size { get; set; }
+        public DateTime Date { get; set; }
     }
 }

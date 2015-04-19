@@ -52,6 +52,7 @@ namespace TestClient
             await EchoAndWrite("STAT");
             line = Response();
             await EchoAndWrite("LIST");
+            await EchoAndWrite("LIST 3");
         }
 
         private static Task EchoAndWrite(string line)
