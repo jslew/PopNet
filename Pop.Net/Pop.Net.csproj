@@ -66,18 +66,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AuthorizationHandler.cs" />
-    <Compile Include="ConnectionHandler.cs" />
-    <Compile Include="ConnectionManager.cs" />
+    <Compile Include="Actors\AuthenticationHandler.cs" />
+    <Compile Include="Actors\ConnectionHandler.cs" />
+    <Compile Include="Actors\ConnectionManager.cs" />
+    <Compile Include="Actors\HttpListener.cs" />
     <Compile Include="ListenerSettings.cs" />
     <Compile Include="MailDrop.cs" />
-    <Compile Include="Messages.cs" />
+    <Compile Include="Msg.cs" />
     <Compile Include="PopNetPackage.cs" />
-    <Compile Include="PopStateHandler.cs" />
+    <Compile Include="Actors\PopStateHandler.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReceiveLineExtensions.cs" />
     <Compile Include="SimpleInjectorDependencyResolver.cs" />
-    <Compile Include="TransactionHandler.cs" />
+    <Compile Include="Actors\TransactionHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Pop.Net.Actors;
 using SimpleInjector;
 
 namespace Pop.Net
@@ -39,10 +40,18 @@ namespace Pop.Net
             var container = new Container();         
             new PopNetPackage().RegisterServices(container);
             var sys = ActorSystem.Create("PopNet");
-            DependencyResolver.Instance = new SimpleInjectorDependencyResolver(container, sys);
-            container.GetInstance<IMailDrop>().Initialize();
-            var listener = sys.ActorOf(DependencyResolver.Instance.Create<ConnectionManager>(), "ConnectionManager");
-            listener.Tell("start");
+            DependencyResolver.Instance = new SimpleInjectorDependencyResolver(container, sys);            
+            var popListener = sys.ActorOf(DependencyResolver.Instance.Create<ConnectionManager>(), "ConnectionManager");
+            popListener.Tell("start");
+            var httpListener = new HttpListener();
+            Task.Run(() => httpListener.Start());
+            while (true)
+            {               
+                var line = Console.ReadLine();
+                if (line == null || line.ToLowerInvariant() == "quit")
+                    break;
+            }
+            httpListener.Stop();
             sys.AwaitTermination();                        
         }
     }

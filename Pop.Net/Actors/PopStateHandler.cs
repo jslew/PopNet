@@ -1,10 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
 
-namespace Pop.Net
+namespace Pop.Net.Actors
 {
     abstract class PopStateHandler : ReceiveActor
     {
@@ -17,28 +16,49 @@ namespace Pop.Net
 
         protected void ReceiveDefault()
         {
-            ReceiveCommand("QUIT",_ => ConnectionHandler.Tell(new Messages.ClientQuit()));
-            Receive<Messages.ReceiveLine>(msg => ReceiveUnknown(msg));
+            ReceiveCommand("QUIT", _ => OnQuit());
+            Receive<Msg.ReceiveLine>(msg => ReceiveUnknown(msg));
+            Receive<Msg.InitializeStateHandler>(msg => OnInitialize(msg));
         }
 
-        public void ReceiveUnknown(Messages.ReceiveLine msg)
+        
+        protected virtual void OnInitialize(Msg.InitializeStateHandler msg)
+        {
+            ConnectionHandler.Tell(new Msg.StateHandlerInitialized());
+        }
+
+        protected virtual void OnQuit()
+        {
+            SendOkResponse("seeya.");
+            Quit();
+
+        }
+
+        protected void Quit()
+        {
+            ConnectionHandler.Tell(new Msg.ClientQuit());
+        }
+
+        public void ReceiveUnknown(Msg.ReceiveLine msg)
         {
             SendErrResponse("Unknown command: {0}", msg.Line);
         }
 
-        protected void ReceiveCommand(string command, Action<Messages.ReceiveLine> handler)
+        
+
+        protected void ReceiveCommand(string command, Action<Msg.ReceiveLine> handler)
         {
             Receive(l => l.GetCommand() == command, handler);
         }
 
         protected void SendOkResponse(string text, params object[] args)
         {
-            ConnectionHandler.Tell(new Messages.SendLine { Line = "+OK " + String.Format(text,args)});
+            ConnectionHandler.Tell(new Msg.SendLine { Line = "+OK " + String.Format(text,args)});
         }
 
         protected void SendMultilineResponse(string okMsg, params string[] lines)
         {            
-            ConnectionHandler.Tell(new Messages.SendLines
+            ConnectionHandler.Tell(new Msg.SendLines
             {
                 Lines = new[] { "+OK " + okMsg }.Concat(lines).Concat(".").ToList()
             });
@@ -46,7 +66,7 @@ namespace Pop.Net
 
         protected void SendErrResponse(string text, params object[] args)
         {
-            ConnectionHandler.Tell(new Messages.SendLine { Line = "-ERR " + String.Format(text, args) });
+            ConnectionHandler.Tell(new Msg.SendLine { Line = "-ERR " + String.Format(text, args) });
         }
 
         protected override void PreStart()

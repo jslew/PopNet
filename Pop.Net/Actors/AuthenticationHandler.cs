@@ -1,24 +1,25 @@
 using System;
 using Akka.Actor;
 
-namespace Pop.Net
+namespace Pop.Net.Actors
 {
-    internal class AuthorizationHandler : PopStateHandler
+    internal class AuthenticationHandler : PopStateHandler
     {        
         private string _userName;
 
-        public AuthorizationHandler() : base(Context.Parent)
+        public AuthenticationHandler() : base(Context.Parent)
         {                        
             Become(ExpectUserCommand);                         
         }
 
+        
         private void ExpectUserCommand()
         {
             ReceiveCommand("USER", ReceiveUser);            
             ReceiveDefault();
         }        
 
-        public void ReceiveUser(Messages.ReceiveLine msg)
+        public void ReceiveUser(Msg.ReceiveLine msg)
         {
             var user = msg.GetArgs();
             if (user == "User1")
@@ -32,21 +33,22 @@ namespace Pop.Net
                 SendErrResponse("no such user: {0}.", user);
             }
         }
-
         
-
         private void ExpectPassCommand()
         {
             Receive(ReceivePass, IsCommandPredicate("PASS"));
             ExpectUserCommand();            
         }
 
-        private void ReceivePass(Messages.ReceiveLine msg)
+        private void ReceivePass(Msg.ReceiveLine msg)
         {
             if (msg.GetArgs() == "P@ssword1")
-            {
-                SendOkResponse("user {0} is authenticated.", _userName);
-                ConnectionHandler.Tell(new Messages.UserAuthenticated {User = _userName});                
+            {                
+                ConnectionHandler.Tell(new Msg.UserAuthenticated
+                {
+                    User = _userName,
+                    OkMessage = String.Format("+OK user {0} is authenticated.", _userName)
+                });
             }
             else
             {
@@ -54,25 +56,9 @@ namespace Pop.Net
             }
         }
 
-        private Predicate<Messages.ReceiveLine> IsCommandPredicate(string command)
+        private Predicate<Msg.ReceiveLine> IsCommandPredicate(string command)
         {
             return l => l.GetCommand() == command;
         }       
-    }
-
-    public static class ReceiveLineExtensions
-    {
-        public static string GetCommand(this Messages.ReceiveLine line)
-        {
-            return line.Line.Split(' ')[0];
-        }
-
-        public static string GetArgs(this Messages.ReceiveLine line)
-        {
-            var idx = line.Line.IndexOf(' ');
-            if (idx == -1)
-                return "";
-            return line.Line.Substring(idx + 1).Trim();
-        }        
     }
 }

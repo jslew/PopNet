@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using Akka.Actor;
 
-namespace Pop.Net
+namespace Pop.Net.Actors
 {
     internal class ConnectionManager : ReceiveActor
     {
@@ -18,7 +18,7 @@ namespace Pop.Net
             _ctx = ctx;
             Receive<string>(msg => msg == "start", _ => Listen());
             Receive<TcpClient>(client => HandleNewClient(client));
-            Receive<Messages.ConnectionClosed>(msg => HandleConnectionClosed(msg));
+            Receive<Msg.ConnectionClosed>(msg => HandleConnectionClosed(msg));
         }
                 
         private void Listen()
@@ -38,14 +38,14 @@ namespace Pop.Net
         {
             var handlerProps = DependencyResolver.Instance.Create<ConnectionHandler>();
             Console.WriteLine("Client conneected...");
-            Context.ActorOf(handlerProps,"ConnectionHandler" + _connectionNum++).Tell(new Messages.ConnectionOpened
+            Context.ActorOf(handlerProps,"ConnectionHandler" + _connectionNum++).Tell(new Msg.ConnectionOpened
             {
                 Client = client
             });
             AcceptNextClient();
         }
 
-        private void HandleConnectionClosed(Messages.ConnectionClosed msg)
+        private void HandleConnectionClosed(Msg.ConnectionClosed msg)
         {            
             Context.Stop(Context.Sender);
         }    
